@@ -40,7 +40,7 @@ void runTCPServer(int port) {
         exit(1);
     }
 
-    for (int i = 0; i < 100; ++i) { // Handle 100 pings
+    for (int i = 0; i < 1000; ++i) { // Handle 100 pings
         bzero(buffer, 256);
         n = read(newsockfd, buffer, 255);
         if (n < 0) {
@@ -66,27 +66,23 @@ void runUDPServer(int port) {
     socklen_t clilen;
     int n;
 
-    // Create UDP socket
     sockfd = socket(AF_INET, SOCK_DGRAM, 0);
     if (sockfd < 0) {
         std::cerr << "ERROR opening socket\n";
         exit(1);
     }
 
-    // Zero out the server address structure and configure it
     bzero((char*)&serv_addr, sizeof(serv_addr));
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_addr.s_addr = INADDR_ANY;
     serv_addr.sin_port = htons(port);
 
-    // Bind the socket to the port
     if (bind(sockfd, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) < 0) {
         std::cerr << "ERROR on binding\n";
         close(sockfd);
         exit(1);
     }
 
-    // Set receive timeout of 2 seconds
     struct timeval timeout;
     timeout.tv_sec = 2;
     timeout.tv_usec = 0;
@@ -98,11 +94,9 @@ void runUDPServer(int port) {
 
     clilen = sizeof(cli_addr);
 
-    // Receive and respond to 100 pings
-    for (int i = 0; i < 100; ++i) {
+    for (int i = 0; i < 1000; ++i) {
         bzero(buffer, 256);
 
-        // Attempt to receive a ping
         n = recvfrom(sockfd, buffer, 255, 0, (struct sockaddr*)&cli_addr, &clilen);
         if (n < 0) {
             if (errno == EWOULDBLOCK || errno == EAGAIN) {
@@ -116,7 +110,6 @@ void runUDPServer(int port) {
         }
         std::cout << "Received ping: " << buffer << "\n";
 
-        // Respond with a pong
         n = sendto(sockfd, "Pong", 4, 0, (struct sockaddr*)&cli_addr, clilen);
         if (n < 0) {
             std::cerr << "ERROR in sendto\n";

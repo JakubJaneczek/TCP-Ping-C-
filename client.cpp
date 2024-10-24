@@ -44,7 +44,7 @@ void runTCPClient(const std::string& address, int port) {
     }
 
     long totalDuration = 0;
-    for (int i = 0; i < 100; ++i) {
+    for (int i = 0; i < 1000; ++i) {
         auto start = high_resolution_clock::now();
 
         std::string message = "Ping " + std::to_string(i + 1);
@@ -102,7 +102,7 @@ void runUDPClient(const std::string& address, int port) {
     }
 
     long totalDuration = 0;
-    for (int i = 0; i < 100; ++i) {
+    for (int i = 0; i < 1000; ++i) {
         auto start = high_resolution_clock::now();
 
         std::string message = "Ping " + std::to_string(i + 1);
