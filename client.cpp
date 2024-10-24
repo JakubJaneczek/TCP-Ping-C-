@@ -9,9 +9,11 @@
 #include <unistd.h>
 #include <ctime>
 #include <iomanip>
+#include <netinet/tcp.h>
 
 using namespace std::chrono;
 
+// Function to print the current timestamp
 void printCurrentTimestamp() {
     auto now = system_clock::now();
     std::time_t currentTime = system_clock::to_time_t(now);
@@ -19,14 +21,54 @@ void printCurrentTimestamp() {
     std::cout << "[" << std::put_time(localTime, "%Y-%m-%d %H:%M:%S") << "] ";
 }
 
-void runTCPClient(const std::string& address, int port) {
+// Function to modify the TCP socket (optional)
+void modifyTCPSocket(int sockfd, bool enableNoDelay, int sendBufferSize, int recvBufferSize) {
+    // Example 1: Disable Nagle's algorithm (TCP_NODELAY)
+    if (enableNoDelay) {
+        int flag = 1;
+        if (setsockopt(sockfd, IPPROTO_TCP, TCP_NODELAY, (void*)&flag, sizeof(int)) < 0) {
+            std::cerr << "ERROR: Couldn't set TCP_NODELAY\n";
+        }
+        else {
+            std::cout << "TCP_NODELAY enabled.\n";
+        }
+    }
+
+    // Example 2: Set socket send buffer size (SO_SNDBUF)
+    if (sendBufferSize > 0) {
+        if (setsockopt(sockfd, SOL_SOCKET, SO_SNDBUF, &sendBufferSize, sizeof(sendBufferSize)) < 0) {
+            std::cerr << "ERROR: Couldn't set SO_SNDBUF\n";
+        }
+        else {
+            std::cout << "Send buffer size set to " << sendBufferSize << " bytes.\n";
+        }
+    }
+
+    // Example 3: Set socket receive buffer size (SO_RCVBUF)
+    if (recvBufferSize > 0) {
+        if (setsockopt(sockfd, SOL_SOCKET, SO_RCVBUF, &recvBufferSize, sizeof(recvBufferSize)) < 0) {
+            std::cerr << "ERROR: Couldn't set SO_RCVBUF\n";
+        }
+        else {
+            std::cout << "Receive buffer size set to " << recvBufferSize << " bytes.\n";
+        }
+    }
+}
+
+void runTCPClient(const std::string& address, int port, bool modifySocket = false, bool enableNoDelay = false, int sendBufferSize = 0, int recvBufferSize = 0) {
     int sockfd;
     struct sockaddr_in serv_addr;
     char buffer[256];
+
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd < 0) {
         std::cerr << "ERROR opening socket\n";
         exit(1);
+    }
+
+    // Modify the socket options if requested
+    if (modifySocket) {
+        modifyTCPSocket(sockfd, enableNoDelay, sendBufferSize, recvBufferSize);
     }
 
     bzero((char*)&serv_addr, sizeof(serv_addr));
@@ -67,7 +109,7 @@ void runTCPClient(const std::string& address, int port) {
         std::cout << "Ping " << i + 1 << " RTT: " << duration.count() << " microseconds\n";
     }
 
-    std::cout << "Average RTT: " << totalDuration / 100 << " microseconds\n";
+    std::cout << "Average RTT: " << totalDuration / 1000 << " microseconds\n";
     close(sockfd);
 }
 
@@ -92,6 +134,7 @@ void runUDPClient(const std::string& address, int port) {
 
     socklen_t serv_len = sizeof(serv_addr);
 
+    // Set receive timeout for the socket
     struct timeval timeout;
     timeout.tv_sec = 2;
     timeout.tv_usec = 0;
@@ -138,8 +181,8 @@ void runUDPClient(const std::string& address, int port) {
 }
 
 int main(int argc, char* argv[]) {
-    if (argc != 4) {
-        std::cerr << "Usage: " << argv[0] << " <tcp|udp> <server_ip> <port>\n";
+    if (argc != 4 && argc != 7) {
+        std::cerr << "Usage: " << argv[0] << " <tcp|udp> <server_ip> <port> [enableNoDelay] [sendBufferSize] [recvBufferSize]\n";
         exit(1);
     }
 
@@ -147,8 +190,14 @@ int main(int argc, char* argv[]) {
     std::string server_ip = argv[2];
     int port = std::stoi(argv[3]);
 
+    // Optional socket modification settings for TCP
+    bool enableNoDelay = argc >= 5 ? std::stoi(argv[4]) : false;
+    int sendBufferSize = argc >= 6 ? std::stoi(argv[5]) : 0;
+    int recvBufferSize = argc >= 7 ? std::stoi(argv[6]) : 0;
+
     if (protocol == "tcp") {
-        runTCPClient(server_ip, port);
+        bool modifySocket = (argc == 7);  // Enable modification if more arguments are passed
+        runTCPClient(server_ip, port, modifySocket, enableNoDelay, sendBufferSize, recvBufferSize);
     }
     else if (protocol == "udp") {
         runUDPClient(server_ip, port);
