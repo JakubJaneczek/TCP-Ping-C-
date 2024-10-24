@@ -133,7 +133,7 @@ void runUDPClient(const std::string& address, int port) {
         std::cout << "Ping " << i + 1 << " RTT: " << duration.count() << " microseconds\n";
     }
 
-    std::cout << "Average RTT: " << totalDuration / 100 << " microseconds\n";
+    std::cout << "Average RTT: " << totalDuration / 1000 << " microseconds\n";
     close(sockfd);
 }
 
