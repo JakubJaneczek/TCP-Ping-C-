@@ -140,7 +140,7 @@ void runTCPClient(const std::string& address, int port, bool modifySocket = fals
     std::ofstream csvFile("TCP_10%Loss_ping_results.csv");
     csvFile << "Ping,RTT (microseconds)\n";
 
-    for (int i = 0; i < 1000; ++i) {
+    for (int i = 0; i < 100; ++i) {
         auto start = high_resolution_clock::now();
 
         std::string message = "Ping " + std::to_string(i + 1);
@@ -166,7 +166,7 @@ void runTCPClient(const std::string& address, int port, bool modifySocket = fals
         csvFile << i + 1 << "," << duration.count() << "\n";
     }
 
-    std::cout << "Average RTT: " << totalDuration / 1000 << " microseconds\n";
+    std::cout << "Average RTT: " << totalDuration / 100 << " microseconds\n";
     csvFile.close();  // Close the CSV file
     close(sockfd);
 }
@@ -208,7 +208,7 @@ void runUDPClient(const std::string& address, int port) {
     csvFile << "Ping,RTT (microseconds)\n";
 
     long totalDuration = 0;
-    for (int i = 0; i < 1000; ++i) {
+    for (int i = 0; i < 100; ++i) {
         start = high_resolution_clock::now();
 
         std::string message = "Ping " + std::to_string(i + 1);
@@ -246,7 +246,7 @@ void runUDPClient(const std::string& address, int port) {
         csvFile << i + 1 << "," << duration.count() << "\n";  // Write ping and RTT to CSV file
     }
 
-    std::cout << "Average RTT: " << totalDuration / 1000 << " microseconds\n";
+    std::cout << "Average RTT: " << totalDuration / 100 << " microseconds\n";
     csvFile.close();  // Close the CSV file
     close(sockfd);
 }
