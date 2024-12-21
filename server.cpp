@@ -40,7 +40,7 @@ void runTCPServer(int port) {
         exit(1);
     }
 
-    for (int i = 0; i < 1000; ++i) { 
+    for (int i = 0; i < 100; ++i) { 
         bzero(buffer, 256);
         n = read(newsockfd, buffer, 255);
         if (n < 0) {
