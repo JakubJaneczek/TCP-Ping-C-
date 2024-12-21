@@ -11,10 +11,8 @@
 #include <ctime>
 #include <iomanip>
 #include <netinet/tcp.h>
-#include "OpenXLSX.hpp"
 
 using namespace std::chrono;
-using namespace OpenXLSX;
 
 void printCurrentTimestamp() {
     auto now = system_clock::now();
@@ -61,11 +59,8 @@ void runTCPClient(const std::string& address, int port, const std::string& fileP
     char buffer[256];
     long totalDuration = 0;
 
-    XLDocument doc;
-    doc.create(filePath);
-    auto ws = doc.workbook().worksheet("Sheet1");
-    ws.cell("A1").value() = "Ping";
-    ws.cell("B1").value() = "RTT (microseconds)";
+    std::ofstream csvFile(filePath);
+    csvFile << "Ping,RTT (microseconds)\n";
 
     for (int i = 0; i < 100; ++i) {
         auto start = high_resolution_clock::now();
@@ -89,12 +84,11 @@ void runTCPClient(const std::string& address, int port, const std::string& fileP
         printCurrentTimestamp();
         std::cout << "Ping " << i + 1 << " RTT: " << duration.count() << " microseconds\n";
 
-        ws.cell(i + 2, 1).value() = i + 1;
-        ws.cell(i + 2, 2).value() = duration.count();
+        csvFile << i + 1 << "," << duration.count() << "\n";
     }
 
     std::cout << "Average RTT: " << totalDuration / 100 << " microseconds\n";
-    doc.save();
+    csvFile.close();
     close(sockfd);
 }
 
@@ -130,11 +124,8 @@ void runUDPClient(const std::string& address, int port, const std::string& fileP
     auto duration = duration_cast<microseconds>(stop - start);
     std::cout << "UDP Connection establish time: " << duration.count() << " microseconds \n";
 
-    XLDocument doc;
-    doc.create(filePath);
-    auto ws = doc.workbook().worksheet("Sheet1");
-    ws.cell("A1").value() = "Ping";
-    ws.cell("B1").value() = "RTT (microseconds)";
+    std::ofstream csvFile(filePath);
+    csvFile << "Ping,RTT (microseconds)\n";
 
     long totalDuration = 0;
     for (int i = 0; i < 100; ++i) {
@@ -157,8 +148,7 @@ void runUDPClient(const std::string& address, int port, const std::string& fileP
                 printCurrentTimestamp();
                 std::cout << "Ping " << i + 1 << " RTT: " << duration.count() << " microseconds\n";
                 std::cout << "Timeout reached, no response for Ping " << i + 1 << "\n";
-                ws.cell(i + 2, 1).value() = i + 1;
-                ws.cell(i + 2, 2).value() = "Timeout";
+                csvFile << i + 1 << ",Timeout\n";
                 continue;
             } else {
                 std::cerr << "ERROR in recvfrom\n";
@@ -172,12 +162,11 @@ void runUDPClient(const std::string& address, int port, const std::string& fileP
 
         printCurrentTimestamp();
         std::cout << "Ping " << i + 1 << " RTT: " << duration.count() << " microseconds\n";
-        ws.cell(i + 2, 1).value() = i + 1;
-        ws.cell(i + 2, 2).value() = duration.count();
+        csvFile << i + 1 << "," << duration.count() << "\n";
     }
 
     std::cout << "Average RTT: " << totalDuration / 100 << " microseconds\n";
-    doc.save();
+    csvFile.close();
     close(sockfd);
 }
 
