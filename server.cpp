@@ -129,7 +129,11 @@ int main(int argc, char* argv[]) {
     int port = std::stoi(argv[2]);
 
     if (protocol == "tcp") {
-        runTCPServer(port);
+        while(true)
+        {
+            runTCPServer(port);
+            port++;
+        }
     }
     else if (protocol == "udp") {
         runUDPServer(port);
