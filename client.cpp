@@ -11,8 +11,10 @@
 #include <ctime>
 #include <iomanip>
 #include <netinet/tcp.h>
+#include "OpenXLSX.hpp"
 
 using namespace std::chrono;
+using namespace OpenXLSX;
 
 void printCurrentTimestamp() {
     auto now = system_clock::now();
@@ -31,7 +33,7 @@ int performTCPHandshake(const std::string& address, int port) {
         std::cerr << "ERROR opening socket\n";
         exit(1);
     }
-    
+
     bzero((char*)&serv_addr, sizeof(serv_addr));
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_port = htons(port);
@@ -54,13 +56,16 @@ int performTCPHandshake(const std::string& address, int port) {
     return sockfd;
 }
 
-void runTCPClient(const std::string& address, int port) {
+void runTCPClient(const std::string& address, int port, const std::string& filePath) {
     int sockfd = performTCPHandshake(address, port);
     char buffer[256];
     long totalDuration = 0;
 
-    std::ofstream csvFile("TCP_10%Loss_ping_results.csv");
-    csvFile << "Ping,RTT (microseconds)\n";
+    XLDocument doc;
+    doc.create(filePath);
+    auto ws = doc.workbook().worksheet("Sheet1");
+    ws.cell("A1").value() = "Ping";
+    ws.cell("B1").value() = "RTT (microseconds)";
 
     for (int i = 0; i < 100; ++i) {
         auto start = high_resolution_clock::now();
@@ -84,20 +89,21 @@ void runTCPClient(const std::string& address, int port) {
         printCurrentTimestamp();
         std::cout << "Ping " << i + 1 << " RTT: " << duration.count() << " microseconds\n";
 
-        csvFile << i + 1 << "," << duration.count() << "\n";
+        ws.cell(i + 2, 1).value() = i + 1;
+        ws.cell(i + 2, 2).value() = duration.count();
     }
 
     std::cout << "Average RTT: " << totalDuration / 100 << " microseconds\n";
-    csvFile.close(); 
+    doc.save();
     close(sockfd);
 }
 
-void runUDPClient(const std::string& address, int port) {
+void runUDPClient(const std::string& address, int port, const std::string& filePath) {
     struct sockaddr_in serv_addr;
     socklen_t serv_len = sizeof(serv_addr);
     char buffer[256];
     auto start = high_resolution_clock::now();
-    int sockfd;// = openUDPConnection(address, port, serv_addr);
+    int sockfd;
 
     sockfd = socket(AF_INET, SOCK_DGRAM, 0);
     if (sockfd < 0) {
@@ -123,8 +129,12 @@ void runUDPClient(const std::string& address, int port) {
     auto stop = high_resolution_clock::now();
     auto duration = duration_cast<microseconds>(stop - start);
     std::cout << "UDP Connection establish time: " << duration.count() << " microseconds \n";
-    std::ofstream csvFile("UDP_80%Loss_ping_results.csv");
-    csvFile << "Ping,RTT (microseconds)\n";
+
+    XLDocument doc;
+    doc.create(filePath);
+    auto ws = doc.workbook().worksheet("Sheet1");
+    ws.cell("A1").value() = "Ping";
+    ws.cell("B1").value() = "RTT (microseconds)";
 
     long totalDuration = 0;
     for (int i = 0; i < 100; ++i) {
@@ -142,14 +152,14 @@ void runUDPClient(const std::string& address, int port) {
         if (n < 0) {
             if (errno == EWOULDBLOCK || errno == EAGAIN) {
                 stop = high_resolution_clock::now();
-        	duration = duration_cast<microseconds>(stop - start);
-        	totalDuration += duration.count();
+                duration = duration_cast<microseconds>(stop - start);
+                totalDuration += duration.count();
                 printCurrentTimestamp();
                 std::cout << "Ping " << i + 1 << " RTT: " << duration.count() << " microseconds\n";
                 std::cout << "Timeout reached, no response for Ping " << i + 1 << "\n";
-                csvFile << i + 1 << ",Timeout\n";
+                ws.cell(i + 2, 1).value() = i + 1;
+                ws.cell(i + 2, 2).value() = "Timeout";
                 continue;
-                
             } else {
                 std::cerr << "ERROR in recvfrom\n";
                 break;
@@ -162,31 +172,31 @@ void runUDPClient(const std::string& address, int port) {
 
         printCurrentTimestamp();
         std::cout << "Ping " << i + 1 << " RTT: " << duration.count() << " microseconds\n";
-        csvFile << i + 1 << "," << duration.count() << "\n";  
+        ws.cell(i + 2, 1).value() = i + 1;
+        ws.cell(i + 2, 2).value() = duration.count();
     }
 
     std::cout << "Average RTT: " << totalDuration / 100 << " microseconds\n";
-    csvFile.close();  // Close the CSV file
+    doc.save();
     close(sockfd);
 }
 
 int main(int argc, char* argv[]) {
-    if (argc != 4) {
-        std::cerr << "Usage: " << argv[0] << " <tcp|udp> <server_ip> <port>\n";
+    if (argc != 5) {
+        std::cerr << "Usage: " << argv[0] << " <tcp|udp> <server_ip> <port> <output_file_path>\n";
         exit(1);
     }
 
     std::string protocol = argv[1];
     std::string server_ip = argv[2];
     int port = std::stoi(argv[3]);
+    std::string filePath = argv[4];
 
-    if (protocol == "tcp") {  
-        runTCPClient(server_ip, port);
-    }
-    else if (protocol == "udp") {
-        runUDPClient(server_ip, port);
-    }
-    else {
+    if (protocol == "tcp") {
+        runTCPClient(server_ip, port, filePath);
+    } else if (protocol == "udp") {
+        runUDPClient(server_ip, port, filePath);
+    } else {
         std::cerr << "Invalid protocol. Use 'tcp' or 'udp'.\n";
         exit(1);
     }
