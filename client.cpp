@@ -31,11 +31,7 @@ int performTCPHandshake(const std::string& address, int port) {
         std::cerr << "ERROR opening socket\n";
         exit(1);
     }
-
-    if (modifySocket) {
-        modifyTCPSocket(sockfd, enableNoDelay, sendBufferSize, recvBufferSize);
-    }
-
+    
     bzero((char*)&serv_addr, sizeof(serv_addr));
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_port = htons(port);
